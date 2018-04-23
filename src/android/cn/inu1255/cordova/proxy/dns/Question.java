@@ -8,7 +8,16 @@ public class Question {
     public short Class;
 
     private int offset;
+
+    public int Offset() {
+        return offset;
+    }
+
     private int length;
+
+    public int Length() {
+        return length;
+    }
 
     public static Question FromBytes(ByteBuffer buffer) {
         Question q = new Question();
@@ -18,14 +27,6 @@ public class Question {
         q.Class = buffer.getShort();
         q.length = buffer.arrayOffset() + buffer.position() - q.offset;
         return q;
-    }
-
-    public int Offset() {
-        return offset;
-    }
-
-    public int Length() {
-        return length;
     }
 
     public void ToBytes(ByteBuffer buffer) {

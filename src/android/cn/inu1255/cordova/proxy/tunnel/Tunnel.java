@@ -1,11 +1,6 @@
 package cn.inu1255.cordova.proxy.tunnel;
 
 import android.annotation.SuppressLint;
-import android.util.Log;
-
-import cn.inu1255.cordova.proxy.core.LocalVpnService;
-import cn.inu1255.cordova.proxy.core.ProxyConfig;
-import cn.inu1255.cordova.proxy.core.Constant;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -14,16 +9,21 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
 
+import cn.inu1255.cordova.proxy.core.LocalVpnService;
+import cn.inu1255.cordova.proxy.core.ProxyConfig;
+
 public abstract class Tunnel {
 
+    final static ByteBuffer GL_BUFFER = ByteBuffer.allocate(20000);
     public static long SessionCount;
-    protected InetSocketAddress m_DestAddress;
+    
     private SocketChannel m_InnerChannel;
     private ByteBuffer m_SendRemainBuffer;
     private Selector m_Selector;
     private Tunnel m_BrotherTunnel;
     private boolean m_Disposed;
     private InetSocketAddress m_ServerEP;
+    protected InetSocketAddress m_DestAddress;
 
     public Tunnel(SocketChannel innerChannel, Selector selector) {
         this.m_InnerChannel = innerChannel;
@@ -55,10 +55,10 @@ public abstract class Tunnel {
     }
 
     public void connect(InetSocketAddress destAddress) throws Exception {
-        if (LocalVpnService.Instance.protect(m_InnerChannel.socket())) {
+        if (LocalVpnService.Instance.protect(m_InnerChannel.socket())) {//保护socket不走vpn
             m_DestAddress = destAddress;
-            m_InnerChannel.register(m_Selector, SelectionKey.OP_CONNECT, this);
-            m_InnerChannel.connect(m_ServerEP);
+            m_InnerChannel.register(m_Selector, SelectionKey.OP_CONNECT, this);//注册连接事件
+            m_InnerChannel.connect(m_ServerEP);//连接目标
         } else {
             throw new Exception("VPN protect socket failed.");
         }
@@ -68,7 +68,7 @@ public abstract class Tunnel {
         if (m_InnerChannel.isBlocking()) {
             m_InnerChannel.configureBlocking(false);
         }
-        m_InnerChannel.register(m_Selector, SelectionKey.OP_READ, this);
+        m_InnerChannel.register(m_Selector, SelectionKey.OP_READ, this);//注册读事件
     }
 
 
@@ -77,37 +77,38 @@ public abstract class Tunnel {
         while (buffer.hasRemaining()) {
             bytesSent = m_InnerChannel.write(buffer);
             if (bytesSent == 0) {
-                break;
+                break;//不能再发送了，终止循环
             }
         }
 
-        if (buffer.hasRemaining()) {
-            if (copyRemainData) {
+        if (buffer.hasRemaining()) {//数据没有发送完毕
+            if (copyRemainData) {//拷贝剩余数据，然后侦听写入事件，待可写入时写入。
+                //拷贝剩余数据
                 if (m_SendRemainBuffer == null) {
                     m_SendRemainBuffer = ByteBuffer.allocate(buffer.capacity());
                 }
                 m_SendRemainBuffer.clear();
                 m_SendRemainBuffer.put(buffer);
                 m_SendRemainBuffer.flip();
-                m_InnerChannel.register(m_Selector, SelectionKey.OP_WRITE, this);
+                m_InnerChannel.register(m_Selector, SelectionKey.OP_WRITE, this);//注册写事件
             }
             return false;
-        } else {
+        } else {//发送完毕了
             return true;
         }
     }
 
     protected void onTunnelEstablished() throws Exception {
-        this.beginReceive();
-        m_BrotherTunnel.beginReceive();
+        this.beginReceive();//开始接收数据
+        m_BrotherTunnel.beginReceive();//兄弟也开始收数据吧
     }
 
     @SuppressLint("DefaultLocale")
     public void onConnectable() {
         try {
-            if (m_InnerChannel.finishConnect()) {
-                onConnected(ByteBuffer.allocate(2048));
-            } else {
+            if (m_InnerChannel.finishConnect()) {//连接成功
+                onConnected(GL_BUFFER);//通知子类TCP已连接，子类可以根据协议实现握手等。
+            } else {//连接失败
                 LocalVpnService.Instance.writeLog("Error: connect to %s failed.", m_ServerEP);
                 this.dispose();
             }
@@ -119,37 +120,38 @@ public abstract class Tunnel {
 
     public void onReadable(SelectionKey key) {
         try {
-            ByteBuffer buffer = ByteBuffer.allocate(2048);
+            ByteBuffer buffer = GL_BUFFER;
             buffer.clear();
             int bytesRead = m_InnerChannel.read(buffer);
             if (bytesRead > 0) {
                 buffer.flip();
-                afterReceived(buffer);
-                if (isTunnelEstablished() && buffer.hasRemaining()) {
-                    m_BrotherTunnel.beforeSend(buffer);
+                afterReceived(buffer);//先让子类处理，例如解密数据。
+                if (isTunnelEstablished() && buffer.hasRemaining()) {//将读到的数据，转发给兄弟。
+                    m_BrotherTunnel.beforeSend(buffer);//发送之前，先让子类处理，例如做加密等。
                     if (!m_BrotherTunnel.write(buffer, true)) {
-                        key.cancel();
+                        key.cancel();//兄弟吃不消，就取消读取事件。
                         if (ProxyConfig.IS_DEBUG)
-                            Log.d(Constant.TAG, m_ServerEP + "can not read more.");
+                            System.out.printf("%s can not read more.\n", m_ServerEP);
                     }
                 }
             } else if (bytesRead < 0) {
-                this.dispose();
+                this.dispose();//连接已关闭，释放资源。
             }
         } catch (Exception e) {
+            e.printStackTrace();
             this.dispose();
         }
     }
 
     public void onWritable(SelectionKey key) {
         try {
-            this.beforeSend(m_SendRemainBuffer);
-            if (this.write(m_SendRemainBuffer, false)) {
-                key.cancel();
+            this.beforeSend(m_SendRemainBuffer);//发送之前，先让子类处理，例如做加密等。
+            if (this.write(m_SendRemainBuffer, false)) {//如果剩余数据已经发送完毕
+                key.cancel();//取消写事件。
                 if (isTunnelEstablished()) {
-                    m_BrotherTunnel.beginReceive();
+                    m_BrotherTunnel.beginReceive();//这边数据发送完毕，通知兄弟可以收数据了。
                 } else {
-                    this.beginReceive();
+                    this.beginReceive();//开始接收代理服务器响应数据
                 }
             }
         } catch (Exception e) {
@@ -171,7 +173,7 @@ public abstract class Tunnel {
             }
 
             if (m_BrotherTunnel != null && disposeBrother) {
-                m_BrotherTunnel.disposeInternal(false);
+                m_BrotherTunnel.disposeInternal(false);//把兄弟的资源也释放了。
             }
 
             m_InnerChannel = null;

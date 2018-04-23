@@ -1,10 +1,10 @@
 package cn.inu1255.cordova.proxy.tunnel.httpconnect;
 
+import java.net.InetSocketAddress;
+
 import android.net.Uri;
 
 import cn.inu1255.cordova.proxy.tunnel.Config;
-
-import java.net.InetSocketAddress;
 
 public class HttpConnectConfig extends Config {
     public String UserName;
