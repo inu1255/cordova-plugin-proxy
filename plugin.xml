@@ -1,0 +1,54 @@
+<?xml version='1.0' encoding='utf-8'?>
+<plugin xmlns:android="http://schemas.android.com/apk/res/android" id="cn.inu1255.cordova.proxy" version="1.0.0"
+    xmlns="http://apache.org/cordova/ns/plugins/1.0">
+    <name>proxy</name>
+    <js-module name="proxy" src="www/proxy.js">
+        <clobbers target="inu.proxy" />
+    </js-module>
+	<config-file target="AndroidManifest.xml" parent="/*">
+		<uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+		<uses-permission android:name="android.permission.READ_PHONE_STATE" />
+		<uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+	</config-file>
+	<config-file target="AndroidManifest.xml" parent="/*/application">
+        <service android:name="cn.inu1255.cordova.proxy.core.LocalVpnService" android:permission="android.permission.BIND_VPN_SERVICE">
+            <intent-filter>
+                <action android:name="android.net.VpnService" />
+            </intent-filter>
+        </service>
+	</config-file>
+    <platform name="android">
+        <config-file parent="/*" target="res/xml/config.xml">
+            <feature name="proxy">
+                <param name="android-package" value="cn.inu1255.cordova.proxy.Proxy" />
+            </feature>
+        </config-file>
+        <config-file parent="/*" target="AndroidManifest.xml"></config-file>
+		<source-file src="src/android/cn/inu1255/cordova/proxy/core/ProxyConfig.java" target-dir="src/cn/inu1255/cordova/proxy/core/"/>
+		<source-file src="src/android/cn/inu1255/cordova/proxy/core/LocalVpnService.java" target-dir="src/cn/inu1255/cordova/proxy/core/"/>
+		<source-file src="src/android/cn/inu1255/cordova/proxy/core/DnsProxy.java" target-dir="src/cn/inu1255/cordova/proxy/core/"/>
+		<source-file src="src/android/cn/inu1255/cordova/proxy/core/Constant.java" target-dir="src/cn/inu1255/cordova/proxy/core/"/>
+		<source-file src="src/android/cn/inu1255/cordova/proxy/core/Utils.java" target-dir="src/cn/inu1255/cordova/proxy/core/"/>
+		<source-file src="src/android/cn/inu1255/cordova/proxy/core/TunnelFactory.java" target-dir="src/cn/inu1255/cordova/proxy/core/"/>
+		<source-file src="src/android/cn/inu1255/cordova/proxy/core/TcpProxyServer.java" target-dir="src/cn/inu1255/cordova/proxy/core/"/>
+		<source-file src="src/android/cn/inu1255/cordova/proxy/core/HttpHostHeaderParser.java" target-dir="src/cn/inu1255/cordova/proxy/core/"/>
+		<source-file src="src/android/cn/inu1255/cordova/proxy/core/NatSessionManager.java" target-dir="src/cn/inu1255/cordova/proxy/core/"/>
+		<source-file src="src/android/cn/inu1255/cordova/proxy/core/NatSession.java" target-dir="src/cn/inu1255/cordova/proxy/core/"/>
+		<source-file src="src/android/cn/inu1255/cordova/proxy/tunnel/Tunnel.java" target-dir="src/cn/inu1255/cordova/proxy/tunnel/"/>
+		<source-file src="src/android/cn/inu1255/cordova/proxy/tunnel/RawTunnel.java" target-dir="src/cn/inu1255/cordova/proxy/tunnel/"/>
+		<source-file src="src/android/cn/inu1255/cordova/proxy/tunnel/Config.java" target-dir="src/cn/inu1255/cordova/proxy/tunnel/"/>
+		<source-file src="src/android/cn/inu1255/cordova/proxy/tunnel/httpconnect/HttpConnectTunnel.java" target-dir="src/cn/inu1255/cordova/proxy/tunnel/httpconnect/"/>
+		<source-file src="src/android/cn/inu1255/cordova/proxy/tunnel/httpconnect/HttpConnectConfig.java" target-dir="src/cn/inu1255/cordova/proxy/tunnel/httpconnect/"/>
+		<source-file src="src/android/cn/inu1255/cordova/proxy/Proxy.java" target-dir="src/cn/inu1255/cordova/proxy/"/>
+		<source-file src="src/android/cn/inu1255/cordova/proxy/dns/DnsHeader.java" target-dir="src/cn/inu1255/cordova/proxy/dns/"/>
+		<source-file src="src/android/cn/inu1255/cordova/proxy/dns/Resource.java" target-dir="src/cn/inu1255/cordova/proxy/dns/"/>
+		<source-file src="src/android/cn/inu1255/cordova/proxy/dns/DnsPacket.java" target-dir="src/cn/inu1255/cordova/proxy/dns/"/>
+		<source-file src="src/android/cn/inu1255/cordova/proxy/dns/Question.java" target-dir="src/cn/inu1255/cordova/proxy/dns/"/>
+		<source-file src="src/android/cn/inu1255/cordova/proxy/dns/ResourcePointer.java" target-dir="src/cn/inu1255/cordova/proxy/dns/"/>
+		<source-file src="src/android/cn/inu1255/cordova/proxy/dns/DnsFlags.java" target-dir="src/cn/inu1255/cordova/proxy/dns/"/>
+		<source-file src="src/android/cn/inu1255/cordova/proxy/tcpip/UDPHeader.java" target-dir="src/cn/inu1255/cordova/proxy/tcpip/"/>
+		<source-file src="src/android/cn/inu1255/cordova/proxy/tcpip/IPHeader.java" target-dir="src/cn/inu1255/cordova/proxy/tcpip/"/>
+		<source-file src="src/android/cn/inu1255/cordova/proxy/tcpip/CommonMethods.java" target-dir="src/cn/inu1255/cordova/proxy/tcpip/"/>
+		<source-file src="src/android/cn/inu1255/cordova/proxy/tcpip/TCPHeader.java" target-dir="src/cn/inu1255/cordova/proxy/tcpip/"/>
+    </platform>
+</plugin>
