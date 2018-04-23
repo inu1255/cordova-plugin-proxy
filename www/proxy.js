@@ -20,13 +20,12 @@ exports.appList = function(force) {
         }, reject, 'proxy', 'appList', []);
     });
 };
-exports.start = function(agent, packages) {
+exports.start = function(agent) {
     return new Promise((resolve, reject) => {
         exec(function() {
             start_list.push(resolve);
             agent = agent || null;
-            packages = packages instanceof Array ? packages : [packages];
-            exec(onStatusChange, reject, 'proxy', 'start', [agent, packages]);
+            exec(onStatusChange, reject, 'proxy', 'start', [agent]);
         }, reject, 'proxy', 'stop', []);
     });
 };
@@ -43,5 +42,14 @@ exports.isRunning = function() {
 exports.status = function() {
     return new Promise((resolve, reject) => {
         exec(resolve, reject, 'proxy', 'status', []);
+    });
+};
+exports.setDomainProxy = function(domains, status) {
+    return new Promise((resolve, reject) => {
+        if (domains instanceof Array);
+        else if (domains == null) domains = [];
+		else domains = [domains + ""];
+		status = Boolean(status);
+        exec(resolve, reject, 'proxy', 'setDomainProxy', [domains, status]);
     });
 };

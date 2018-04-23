@@ -1,10 +1,7 @@
 package cn.inu1255.cordova.proxy.core;
 
-import org.json.JSONArray;
-
 public class Constant {
     public static final String TAG = "BaoLianDeng";
-    public static JSONArray package_name;
     public static String proxy_ip = "http://192.168.0.102:8888";
     public static final String[] private_route = {
             "1.0.0.0/8",

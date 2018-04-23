@@ -33,7 +33,7 @@ public class NatSessionManager {
 
     public static NatSession createSession(int portKey, int remoteIP, short remotePort) {
         if (Sessions.size() > MAX_SESSION_COUNT) {
-            clearExpiredSessions();
+            clearExpiredSessions();//清理过期的会话。
         }
 
         NatSession session = new NatSession();

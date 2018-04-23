@@ -5,9 +5,14 @@ import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.os.Environment;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Created by cn.inu1255.cordova.proxy1255 on 2018/4/15.
@@ -32,5 +37,18 @@ public class Utils {
             e.printStackTrace();
         }
         return null;
+    }
+
+    public static List<String> jsonStringList(JSONArray arr) {
+        int n = arr.length();
+        ArrayList<String> list = new ArrayList<>();
+        for (int i = 0; i < n; i++) {
+            try {
+                list.add(arr.getString(i));
+            } catch (JSONException e) {
+                list.add(null);
+            }
+        }
+        return list;
     }
 }

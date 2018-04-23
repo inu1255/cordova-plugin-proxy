@@ -23,6 +23,7 @@ import java.util.List;
 
 import cn.inu1255.cordova.proxy.core.Constant;
 import cn.inu1255.cordova.proxy.core.LocalVpnService;
+import cn.inu1255.cordova.proxy.core.ProxyConfig;
 import cn.inu1255.cordova.proxy.core.Utils;
 
 import static android.app.Activity.RESULT_OK;
@@ -60,8 +61,13 @@ public class Proxy extends CordovaPlugin implements LocalVpnService.onStatusChan
         }
         if (action.equals("start")) {
             String agent = args.getString(0);
-            JSONArray package_name = args.getJSONArray(1);
-            this.start(agent, package_name, callbackContext);
+            this.start(agent, callbackContext);
+            return true;
+        }
+        if (action.equals("setDomainProxy")) {
+            JSONArray domains = args.getJSONArray(0);
+            boolean status = args.getBoolean(1);
+            this.setDomainProxy(domains, status, callbackContext);
             return true;
         }
         if (action.equals("stop")) {
@@ -102,11 +108,8 @@ public class Proxy extends CordovaPlugin implements LocalVpnService.onStatusChan
 
     /**
      * 启动代理
-     *
-     * @param package_name
-     * @param callbackContext
      */
-    private void start(String agent, JSONArray package_name, CallbackContext callbackContext) {
+    private void start(String agent, CallbackContext callbackContext) {
         Context ctx = this.cordova.getContext();
         this.statusCallback = callbackContext;
         PluginResult pluginResult = new PluginResult(PluginResult.Status.NO_RESULT);
@@ -114,7 +117,6 @@ public class Proxy extends CordovaPlugin implements LocalVpnService.onStatusChan
         callbackContext.sendPluginResult(pluginResult);
 
         Constant.proxy_ip = agent;
-        Constant.package_name = package_name;
         Intent intent = LocalVpnService.prepare(ctx);
         if (intent == null) {
             ctx.startService(new Intent(ctx, LocalVpnService.class));
@@ -129,6 +131,7 @@ public class Proxy extends CordovaPlugin implements LocalVpnService.onStatusChan
             data.put("running", LocalVpnService.IsRunning);
             data.put("send", LocalVpnService.m_SentBytes);
             data.put("recv", LocalVpnService.m_ReceivedBytes);
+            data.put("all_proxy", ProxyConfig.Instance.m_all_proxy);
         } catch (JSONException e) {
             e.printStackTrace();
         }
@@ -144,6 +147,11 @@ public class Proxy extends CordovaPlugin implements LocalVpnService.onStatusChan
         } else {
             callbackContext.success(2);
         }
+    }
+
+    private void setDomainProxy(JSONArray domains, boolean status, CallbackContext callbackContext) {
+        JSONArray data = ProxyConfig.Instance.setAllProxy(domains, status);
+        callbackContext.success(data);
     }
 
     @Override

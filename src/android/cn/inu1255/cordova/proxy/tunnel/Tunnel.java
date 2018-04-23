@@ -16,7 +16,7 @@ public abstract class Tunnel {
 
     final static ByteBuffer GL_BUFFER = ByteBuffer.allocate(20000);
     public static long SessionCount;
-    
+
     private SocketChannel m_InnerChannel;
     private ByteBuffer m_SendRemainBuffer;
     private Selector m_Selector;

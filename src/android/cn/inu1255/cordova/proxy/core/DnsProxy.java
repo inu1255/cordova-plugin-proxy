@@ -140,6 +140,23 @@ public class DnsProxy implements Runnable {
         return fakeIP;
     }
 
+    private boolean dnsPollution(byte[] rawPacket, DnsPacket dnsPacket) {
+        if (dnsPacket.Header.QuestionCount > 0) {
+            Question question = dnsPacket.Questions[0];
+            if (question.Type == 1) {
+                int realIP = getFirstIP(dnsPacket);
+                if (ProxyConfig.Instance.needProxy(question.Domain, realIP)) {
+                    int fakeIP = getOrCreateFakeIP(question.Domain);
+                    tamperDnsResponse(rawPacket, dnsPacket, fakeIP);
+                    if (ProxyConfig.IS_DEBUG)
+                        System.out.printf("FakeDns: %s=>%s(%s)\n", question.Domain, CommonMethods.ipIntToString(realIP), CommonMethods.ipIntToString(fakeIP));
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     private void OnDnsResponseReceived(IPHeader ipHeader, UDPHeader udpHeader, DnsPacket dnsPacket) {
         QueryState state = null;
         synchronized (m_QueryArray) {
@@ -150,6 +167,9 @@ public class DnsProxy implements Runnable {
         }
 
         if (state != null) {
+            //DNS污染，默认污染海外网站
+            dnsPollution(udpHeader.m_Data, dnsPacket);
+
             dnsPacket.Header.setID(state.ClientQueryID);
             ipHeader.setSourceIP(state.RemoteIP);
             ipHeader.setDestinationIP(state.ClientIP);
@@ -179,7 +199,7 @@ public class DnsProxy implements Runnable {
             Log.d(Constant.TAG, "DNS Query " + question.Domain);
 
         if (question.Type == 1) {
-            if (ProxyConfig.Instance.needProxy(question.Domain)) {
+            if (ProxyConfig.Instance.needProxy(question.Domain, getIPFromCache(question.Domain))) {
                 int fakeIP = getOrCreateFakeIP(question.Domain);
                 tamperDnsResponse(ipHeader.m_Data, dnsPacket, fakeIP);
 
@@ -213,6 +233,7 @@ public class DnsProxy implements Runnable {
 
     public void onDnsRequestReceived(IPHeader ipHeader, UDPHeader udpHeader, DnsPacket dnsPacket) {
         if (!interceptDns(ipHeader, udpHeader, dnsPacket)) {
+            //转发DNS
             QueryState state = new QueryState();
             state.ClientQueryID = dnsPacket.Header.ID;
             state.QueryNanoTime = System.nanoTime();
@@ -221,12 +242,13 @@ public class DnsProxy implements Runnable {
             state.RemoteIP = ipHeader.getDestinationIP();
             state.RemotePort = udpHeader.getDestinationPort();
 
-            m_QueryID++;
+            // 转换QueryID
+            m_QueryID++;// 增加ID
             dnsPacket.Header.setID(m_QueryID);
 
             synchronized (m_QueryArray) {
-                clearExpiredQueries();
-                m_QueryArray.put(m_QueryID, state);
+                clearExpiredQueries();//清空过期的查询，减少内存开销。
+                m_QueryArray.put(m_QueryID, state);// 关联数据
             }
 
             InetSocketAddress remoteAddress = new InetSocketAddress(CommonMethods.ipIntToInet4Address(state.RemoteIP), state.RemotePort);

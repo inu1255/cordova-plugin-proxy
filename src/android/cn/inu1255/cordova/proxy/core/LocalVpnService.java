@@ -1,7 +1,6 @@
 package cn.inu1255.cordova.proxy.core;
 
 import android.app.PendingIntent;
-import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
@@ -16,7 +15,6 @@ import android.util.Log;
 
 import org.apache.cordova.CordovaActivity;
 
-import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -38,10 +36,6 @@ public class LocalVpnService extends VpnService implements Runnable {
 
     public static LocalVpnService Instance;
     public static boolean IsRunning = false;
-
-    private final String device = android.os.Build.DEVICE;
-    private final String model = android.os.Build.MODEL;
-    private final String version = "" + android.os.Build.VERSION.SDK_INT + " (" + android.os.Build.VERSION.RELEASE + ")";
 
     private static int ID;
     private static int LOCAL_IP;
@@ -163,6 +157,7 @@ public class LocalVpnService extends VpnService implements Runnable {
     String getVersionName() {
         try {
             PackageManager packageManager = getPackageManager();
+            // getPackageName()是你当前类的包名，0代表是获取版本信息
             PackageInfo packInfo = packageManager.getPackageInfo(getPackageName(), 0);
             String version = packInfo.versionName;
             return version;
@@ -171,21 +166,17 @@ public class LocalVpnService extends VpnService implements Runnable {
         }
     }
 
-    public String configDirFor(Context context, String suffix) {
-        return new File(context.getFilesDir().getAbsolutePath(), ".lantern" + suffix).getAbsolutePath();
-    }
-
     @Override
     public synchronized void run() {
         try {
             Log.d(Constant.TAG, "VPNService work thread is running... " + ID);
 
-            ProxyConfig.AppInstallID = getAppInstallID();
-            ProxyConfig.AppVersion = getVersionName();
+            ProxyConfig.AppInstallID = getAppInstallID();//获取安装ID
+            ProxyConfig.AppVersion = getVersionName();//获取版本号
             writeLog("Android version: %s", Build.VERSION.RELEASE);
             writeLog("App version: %s", ProxyConfig.AppVersion);
 
-            waitUntilPrepared();
+            waitUntilPrepared();//检查是否准备完毕。
 
             ProxyConfig.Instance.addProxy(Constant.proxy_ip);
 
@@ -197,8 +188,7 @@ public class LocalVpnService extends VpnService implements Runnable {
             e.printStackTrace();
             writeLog("Fatal error: %s", e.toString());
         }
-
-        writeLog("BaoLianDeng terminated.");
+        writeLog("SmartProxy terminated.");
         dispose();
     }
 
@@ -237,7 +227,7 @@ public class LocalVpnService extends VpnService implements Runnable {
                 TCPHeader tcpHeader = m_TCPHeader;
                 tcpHeader.m_Offset = ipHeader.getHeaderLength();
                 if (ipHeader.getSourceIP() == LOCAL_IP) {
-                    if (tcpHeader.getSourcePort() == m_TcpProxyServer.Port) {
+                    if (tcpHeader.getSourcePort() == m_TcpProxyServer.Port) {// 收到本地TCP服务器数据
                         NatSession session = NatSessionManager.getSession(tcpHeader.getDestinationPort());
                         if (session != null) {
                             ipHeader.setSourceIP(ipHeader.getDestinationIP());
@@ -254,6 +244,8 @@ public class LocalVpnService extends VpnService implements Runnable {
                                         tcpHeader.toString());
                         }
                     } else {
+
+                        // 添加端口映射
                         int portKey = tcpHeader.getSourcePort();
                         NatSession session = NatSessionManager.getSession(portKey);
                         if (session == null || session.RemoteIP != ipHeader.getDestinationIP() || session.RemotePort != tcpHeader.getDestinationPort()) {
@@ -261,13 +253,14 @@ public class LocalVpnService extends VpnService implements Runnable {
                         }
 
                         session.LastNanoTime = System.nanoTime();
-                        session.PacketSent++;
+                        session.PacketSent++;//注意顺序
 
                         int tcpDataSize = ipHeader.getDataLength() - tcpHeader.getHeaderLength();
                         if (session.PacketSent == 2 && tcpDataSize == 0) {
-                            return;
+                            return;//丢弃tcp握手的第二个ACK报文。因为客户端发数据的时候也会带上ACK，这样可以在服务器Accept之前分析出HOST信息。
                         }
 
+                        //分析数据，找到host
                         if (session.BytesSent == 0 && tcpDataSize > 10) {
                             int dataOffset = tcpHeader.m_Offset + tcpHeader.getHeaderLength();
                             String host = HttpHostHeaderParser.parseHost(tcpHeader.m_Data, dataOffset, tcpDataSize);
@@ -276,18 +269,20 @@ public class LocalVpnService extends VpnService implements Runnable {
                             }
                         }
 
+                        // 转发给本地TCP服务器
                         ipHeader.setSourceIP(ipHeader.getDestinationIP());
                         ipHeader.setDestinationIP(LOCAL_IP);
                         tcpHeader.setDestinationPort(m_TcpProxyServer.Port);
 
                         CommonMethods.ComputeTCPChecksum(ipHeader, tcpHeader);
                         m_VPNOutputStream.write(ipHeader.m_Data, ipHeader.m_Offset, size);
-                        session.BytesSent += tcpDataSize;
+                        session.BytesSent += tcpDataSize;//注意顺序
                         m_SentBytes += size;
                     }
                 }
                 break;
             case IPHeader.UDP:
+                // 转发DNS数据包：
                 UDPHeader udpHeader = m_UDPHeader;
                 udpHeader.m_Offset = ipHeader.getHeaderLength();
                 if (ipHeader.getSourceIP() == LOCAL_IP && udpHeader.getDestinationPort() == 53) {
@@ -328,6 +323,8 @@ public class LocalVpnService extends VpnService implements Runnable {
 
         for (ProxyConfig.IPAddress dns : ProxyConfig.Instance.getDnsList()) {
             builder.addDnsServer(dns.Address);
+            if (ProxyConfig.IS_DEBUG)
+                System.out.printf("addDnsServer: %s\n", dns.Address);
         }
 
         for (String routeAddress : Constant.private_route) {
@@ -337,25 +334,24 @@ public class LocalVpnService extends VpnService implements Runnable {
 
         builder.addRoute(CommonMethods.ipIntToString(ProxyConfig.FAKE_NETWORK_IP), 16);
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP && null != Constant.package_name) {
-            int n = Constant.package_name.length();
-            if (n > 0) {
-                PackageManager packageManager = getPackageManager();
-                List<PackageInfo> list = packageManager.getInstalledPackages(0);
-                HashSet<String> packageSet = new HashSet<>();
-
-                for (int i = 0; i < n; i++) {
-                    packageSet.add(Constant.package_name.getString(i));
-                }
-
-                for (int i = 0; i < list.size(); i++) {
-                    PackageInfo info = list.get(i);
-                    if (!packageSet.contains(info.packageName))
-                        builder.addDisallowedApplication(info.packageName);
-                }
-
-            }
-        }
+//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP && null != Constant.package_name) {
+//            int n = Constant.package_name.length();
+//            if (n > 0) {
+//                PackageManager packageManager = getPackageManager();
+//                List<PackageInfo> list = packageManager.getInstalledPackages(0);
+//                HashSet<String> packageSet = new HashSet<>();
+//
+//                for (int i = 0; i < n; i++) {
+//                    packageSet.add(Constant.package_name.getString(i));
+//                }
+//
+//                for (int i = 0; i < list.size(); i++) {
+//                    PackageInfo info = list.get(i);
+//                    if (!packageSet.contains(info.packageName))
+//                        builder.addDisallowedApplication(info.packageName);
+//                }
+//            }
+//        }
 
         Intent intent = new Intent(this, CordovaActivity.class);
         PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, intent, 0);
@@ -373,6 +369,7 @@ public class LocalVpnService extends VpnService implements Runnable {
 
         IsRunning = false;
 
+        // 断开VPN
         try {
             if (m_VPNInterface != null) {
                 m_VPNInterface.close();
@@ -402,7 +399,7 @@ public class LocalVpnService extends VpnService implements Runnable {
         Log.d(Constant.TAG, "VPNService(%s) destroyed: " + ID);
         if (IsRunning) dispose();
         try {
-            // ֹͣTcpServer
+            // 停止TcpServer
             if (m_TcpProxyServer != null) {
                 m_TcpProxyServer.stop();
                 m_TcpProxyServer = null;
@@ -412,7 +409,7 @@ public class LocalVpnService extends VpnService implements Runnable {
             // ignore
         }
         try {
-            // DnsProxy
+            // 停止DNS解析器
             if (m_DnsProxy != null) {
                 m_DnsProxy.stop();
                 m_DnsProxy = null;

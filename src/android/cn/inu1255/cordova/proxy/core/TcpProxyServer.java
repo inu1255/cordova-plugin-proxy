@@ -1,6 +1,7 @@
 package cn.inu1255.cordova.proxy.core;
 
 import android.util.Log;
+
 import cn.inu1255.cordova.proxy.tcpip.CommonMethods;
 import cn.inu1255.cordova.proxy.tunnel.Tunnel;
 
@@ -98,7 +99,7 @@ public class TcpProxyServer implements Runnable {
         short portKey = (short) localChannel.socket().getPort();
         NatSession session = NatSessionManager.getSession(portKey);
         if (session != null) {
-            if (ProxyConfig.Instance.needProxy(session.RemoteIP)) {
+            if (ProxyConfig.Instance.needProxy(session.RemoteHost, session.RemoteIP)) {
                 if (ProxyConfig.IS_DEBUG)
                     Log.d(Constant.TAG, String.format("%d/%d:[PROXY] %s=>%s:%d", NatSessionManager.getSessionCount(),
                             Tunnel.SessionCount, session.RemoteHost,
@@ -120,9 +121,9 @@ public class TcpProxyServer implements Runnable {
             InetSocketAddress destAddress = getDestAddress(localChannel);
             if (destAddress != null) {
                 Tunnel remoteTunnel = TunnelFactory.createTunnelByConfig(destAddress, m_Selector);
-                remoteTunnel.setBrotherTunnel(localTunnel);
-                localTunnel.setBrotherTunnel(remoteTunnel);
-                remoteTunnel.connect(destAddress);
+                remoteTunnel.setBrotherTunnel(localTunnel);//关联兄弟
+                localTunnel.setBrotherTunnel(remoteTunnel);//关联兄弟
+                remoteTunnel.connect(destAddress);//开始连接
             } else {
                 LocalVpnService.Instance.writeLog("Error: socket(%s:%d) target host is null.",
                         localChannel.socket().getInetAddress().toString(), localChannel.socket().getPort());
