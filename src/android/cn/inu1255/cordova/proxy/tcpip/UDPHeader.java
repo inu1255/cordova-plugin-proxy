@@ -1,7 +1,5 @@
 package cn.inu1255.cordova.proxy.tcpip;
 
-import java.util.Locale;
-
 public class UDPHeader {
     static final short offset_src_port = 0; // Source port
     static final short offset_dest_port = 2; // Destination port
@@ -51,7 +49,7 @@ public class UDPHeader {
     @Override
     public String toString() {
         // TODO Auto-generated method stub
-        return String.format(Locale.ENGLISH, "%d->%d", getSourcePort() & 0xFFFF,
+        return String.format("%d->%d", getSourcePort() & 0xFFFF,
                 getDestinationPort() & 0xFFFF);
     }
 }
