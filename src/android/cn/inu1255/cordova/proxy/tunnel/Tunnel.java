@@ -2,6 +2,7 @@ package cn.inu1255.cordova.proxy.tunnel;
 
 import android.annotation.SuppressLint;
 import android.util.Log;
+
 import cn.inu1255.cordova.proxy.core.LocalVpnService;
 import cn.inu1255.cordova.proxy.core.ProxyConfig;
 import cn.inu1255.cordova.proxy.core.Constant;
@@ -23,11 +24,13 @@ public abstract class Tunnel {
     private Tunnel m_BrotherTunnel;
     private boolean m_Disposed;
     private InetSocketAddress m_ServerEP;
+
     public Tunnel(SocketChannel innerChannel, Selector selector) {
         this.m_InnerChannel = innerChannel;
         this.m_Selector = selector;
         SessionCount++;
     }
+
     public Tunnel(InetSocketAddress serverAddress, Selector selector) throws IOException {
         SocketChannel innerChannel = SocketChannel.open();
         innerChannel.configureBlocking(false);
