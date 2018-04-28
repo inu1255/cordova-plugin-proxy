@@ -6,7 +6,6 @@ import android.content.Intent;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
-import android.graphics.drawable.AdaptiveIconDrawable;
 
 import org.apache.cordova.CordovaInterface;
 import org.apache.cordova.CordovaPlugin;
@@ -24,7 +23,6 @@ import java.util.List;
 import cn.inu1255.cordova.proxy.core.Constant;
 import cn.inu1255.cordova.proxy.core.LocalVpnService;
 import cn.inu1255.cordova.proxy.core.ProxyConfig;
-import cn.inu1255.cordova.proxy.core.Utils;
 
 import static android.app.Activity.RESULT_OK;
 
@@ -150,7 +148,7 @@ public class Proxy extends CordovaPlugin implements LocalVpnService.onStatusChan
     }
 
     private void setDomainProxy(JSONArray domains, boolean status, CallbackContext callbackContext) {
-        JSONArray data = ProxyConfig.Instance.setAllProxy(domains, status);
+        JSONArray data = ProxyConfig.Instance.setDomainsProxy(domains, status);
         callbackContext.success(data);
     }
 

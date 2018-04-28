@@ -182,9 +182,10 @@ public class ProxyConfig {
         m_DomainMap.put(domainString, state);
     }
 
-    public JSONArray setAllProxy(JSONArray domains, boolean status) {
+    public JSONArray setDomainsProxy(JSONArray domains, boolean status) {
         m_DomainMap.clear();
         ProxyConfig.Instance.m_all_proxy = status;
+        status = !status;
 
         JSONArray data = new JSONArray();
         int n = domains.length();
