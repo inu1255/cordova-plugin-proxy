@@ -1,11 +1,24 @@
 {
   "name": "cordova-plugin-proxy",
   "version": "1.2.0",
-  "description": "",
+  "description": "vpn proxy",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "cn.inu1255.cordova.proxy1255",
-  "license": "MIT"
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/inu1255/cordova-plugin-proxy.git"
+  },
+  "keywords": [
+    "cordova",
+    "vpn",
+    "proxy"
+  ],
+  "bugs": {
+    "url": "https://github.com/inu1255/cordova-plugin-proxy/issues"
+  },
+  "homepage": "https://github.com/inu1255/cordova-plugin-proxy#readme"
 }
