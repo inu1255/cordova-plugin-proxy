@@ -97,8 +97,6 @@ public class Proxy extends CordovaPlugin implements LocalVpnService.onStatusChan
     }
 
     private void installCert(String key, String name, CallbackContext callbackContext) {
-        key = null == key || key.isEmpty() ? "ca.crt" : key;
-        name = null == name || name.isEmpty() ? "代理证书" : name;
         String CERT_FILE = Environment.getExternalStorageDirectory() + "/" + key;
         File certFile = new File(CERT_FILE);
         Intent intent = KeyChain.createInstallIntent();

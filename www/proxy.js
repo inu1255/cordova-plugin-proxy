@@ -46,8 +46,8 @@ exports.status = function() {
 };
 exports.cert = function(key, name) {
     return new Promise((resolve, reject) => {
-		key = key || ""
-		name = name || ""
+		key = key || "ca.crt"
+		name = name || "代理证书"
         exec(resolve, reject, 'proxy', 'cert', [key, name]);
     });
 };
