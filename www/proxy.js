@@ -44,12 +44,17 @@ exports.status = function() {
         exec(resolve, reject, 'proxy', 'status', []);
     });
 };
+exports.cert = function(key, name) {
+    return new Promise((resolve, reject) => {
+        exec(resolve, reject, 'proxy', 'cert', [key, name]);
+    });
+};
 exports.setDomainProxy = function(domains, status) {
     return new Promise((resolve, reject) => {
         if (domains instanceof Array);
         else if (domains == null) domains = [];
-		else domains = [domains + ""];
-		status = Boolean(status);
+        else domains = [domains + ""];
+        status = Boolean(status);
         exec(resolve, reject, 'proxy', 'setDomainProxy', [domains, status]);
     });
 };

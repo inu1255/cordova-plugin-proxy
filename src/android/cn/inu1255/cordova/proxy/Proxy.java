@@ -6,6 +6,8 @@ import android.content.Intent;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
+import android.os.Environment;
+import android.security.KeyChain;
 
 import org.apache.cordova.CordovaInterface;
 import org.apache.cordova.CordovaPlugin;
@@ -17,8 +19,15 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
+
+import javax.security.cert.CertificateEncodingException;
+import javax.security.cert.CertificateException;
+import javax.security.cert.X509Certificate;
 
 import cn.inu1255.cordova.proxy.core.Constant;
 import cn.inu1255.cordova.proxy.core.LocalVpnService;
@@ -31,8 +40,10 @@ import static android.app.Activity.RESULT_OK;
  */
 public class Proxy extends CordovaPlugin implements LocalVpnService.onStatusChangedListener {
     private static final int START_VPN_SERVICE_REQUEST_CODE = 1985;
+    private static final int INSTALL_CERT = 1986;
     private static String[] FILE_PERMISION = {Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE};
     private CallbackContext statusCallback;
+    private CallbackContext installCallback;
     private List<CallbackContext> stopCallback = new LinkedList<>();
 
     @Override
@@ -76,7 +87,37 @@ public class Proxy extends CordovaPlugin implements LocalVpnService.onStatusChan
             this.status(callbackContext);
             return true;
         }
+        if (action.equals("cert")) {
+            String key = args.getString(0);
+            String name = args.getString(1);
+            this.installCert(key, name, callbackContext);
+            return true;
+        }
         return false;
+    }
+
+    private void installCert(String key, String name, CallbackContext callbackContext) {
+        key = null == key || key.isEmpty() ? "ca.crt" : key;
+        name = null == name || name.isEmpty() ? "代理证书" : name;
+        String CERT_FILE = Environment.getExternalStorageDirectory() + "/" + key;
+        File certFile = new File(CERT_FILE);
+        Intent intent = KeyChain.createInstallIntent();
+        try {
+            FileInputStream certIs = new FileInputStream(CERT_FILE);
+            byte[] cert = new byte[(int) certFile.length()];
+            certIs.read(cert);
+            X509Certificate x509 = X509Certificate.getInstance(cert);
+            intent.putExtra(KeyChain.EXTRA_CERTIFICATE, x509.getEncoded());
+            intent.putExtra(KeyChain.EXTRA_NAME, name);
+            this.cordova.getActivity().startActivityForResult(intent, INSTALL_CERT);  // this works but shows UI
+            installCallback = callbackContext;
+        } catch (IOException e) {
+            callbackContext.error(e.getMessage());
+        } catch (CertificateEncodingException e) {
+            callbackContext.error(e.getMessage());
+        } catch (CertificateException e) {
+            callbackContext.error(e.getMessage());
+        }
     }
 
     private void appList(CallbackContext callbackContext) {
@@ -177,6 +218,8 @@ public class Proxy extends CordovaPlugin implements LocalVpnService.onStatusChan
                 ctx.startService(new Intent(ctx, LocalVpnService.class));
             }
             return;
+        } else if (requestCode == INSTALL_CERT) {
+            installCallback.success(resultCode);
         }
         super.onActivityResult(requestCode, resultCode, intent);
     }
