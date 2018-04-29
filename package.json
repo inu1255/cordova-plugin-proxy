@@ -1,6 +1,6 @@
 {
   "name": "cordova-plugin-proxy",
-  "version": "1.4.0",
+  "version": "1.6.0",
   "description": "vpn proxy",
   "main": "index.js",
   "scripts": {
